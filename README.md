@@ -26,15 +26,15 @@ Kolasu was born as a small framework to support building languages using ANTLR a
 
 ## Using Kolasu in your project
 
-Releases are published on Bintray: 
+Releases are published on JCenter: 
 
 ```
 repositories {
-    maven { url 'https://maven.pkg.github.com/strumenta/strumenta-oss-maven' }
+    jcenter()
 }
 
 dependencies {
-    compile "com.strumenta:kolasu:1.0.5"
+    compile "com.strumenta:kolasu:1.0.6"
 }
 ```
 
