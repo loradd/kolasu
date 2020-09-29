@@ -127,7 +127,7 @@ test {
 }
 
 ktlint {
-    version = "0.35.0"
+    version = "0.39.0"
     verbose = true
     outputToConsole = true
     enableExperimentalRules = true
