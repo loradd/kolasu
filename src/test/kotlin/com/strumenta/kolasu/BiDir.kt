@@ -65,7 +65,7 @@ object CentralRelationshipManager {
     private val delegatesByProperty = HashMap<KProperty<*>, MutableList<ManyPropertyDelegate<*, *>>>()
 
 
-    fun <P:NNode, C:NNode>registerManyProperty(container: P, property: KProperty<*>, delegate: ManyPropertyDelegate<P, C>) {
+    fun registerManyProperty(container: NNode, property: KProperty<*>, delegate: ManyPropertyDelegate<*, *>) {
         containersByDelegate[delegate] = container
         propertiesByDelegate[delegate] = property
         delegatesByProperty.getOrPut(property, { LinkedList() }).add(delegate)
@@ -76,8 +76,16 @@ object CentralRelationshipManager {
     }
 
     fun <P:NNode, C:NNode> getReverse(reverseThis: P, originalProperty: KProperty1<C, MutableList<P>>): ReverseList<C> {
-        val delegates = delegatesByProperty[originalProperty] ?: emptyList()
-        delegates.map { it.getValue(containersByDelegate[it]!! as P, propertiesByDelegate[it]) }
+        val delegates : List<ManyPropertyDelegate<*, *>> = delegatesByProperty[originalProperty] ?: emptyList()
+        val initialElements : List<C> = delegates.map {
+            val container : NNode = containersByDelegate[it]!!
+            val property : KProperty<*> = propertiesByDelegate[it]!!
+            val contained = (it as ManyPropertyDelegate<P, C>).getValue(container as P, property) as List<C>
+            val isInContained = contained.contains(reverseThis)
+            val res : C? = if (isInContained) container as C else null
+            res
+        }.filterNotNull().toList()
+        return ReverseList<C>(initialElements)
     }
 }
 
@@ -129,7 +137,10 @@ class ManyPropertyDelegate<P: NNode, C: NNode> : ReadOnlyProperty<P, MutableList
     }
 }
 
-class ReverseList<E:NNode>() : LinkedList<E>() {
+class ReverseList<E:NNode>(initialElements: List<E>) : LinkedList<E>() {
+    init {
+        this.addAll(initialElements)
+    }
     override fun add(element: E): Boolean {
         TODO()
     }
@@ -148,6 +159,10 @@ class Reverse<P: NNode, C: NNode>(val originalProperty: KProperty1<C, MutableLis
 
 data class Author(val name: String) : NNode {
     val written: MutableList<Book> by ManyPropertyDelegate()
+
+    fun print() {
+        println("Books written by ${this.name}: ${this.written}")
+    }
 }
 
 class Publisher(val name: String) : NNode {
@@ -157,18 +172,37 @@ class Publisher(val name: String) : NNode {
 }
 
 data class Book(val title: String) : NNode {
-    val authors: MutableList<Author> by Reverse(Author::written)
+    val authors by Reverse(Author::written)
+
+    fun print() {
+        println("${this.title} authors: ${this.authors}")
+    }
 }
 
 fun main(args: Array<String>) {
     val jp = Publisher("Johnny Publishing")
     val jp2 = Publisher("Johnny Publishing 2")
     val frank = Author("Frank")
-    val myBook = Book("My Book")
-    jp.publishedBooks.add(myBook)
-    frank.written.add(myBook)
-    println("Books written by ${frank.name}: ${frank.written}")
-    println("${myBook.title} authors: ${myBook.authors}")
+    val bookA = Book("Book A")
+    jp.publishedBooks.add(bookA)
+    frank.written.add(bookA)
+
+    frank.print()
+    bookA.print()
+
+    val bob = Author("Bob")
+    val bookB = Book("Book B")
+    val bookC = Book("Book C")
+    bob.written.add(bookB)
+    frank.written.add(bookC)
+    bob.written.add(bookC)
+
+    frank.print()
+    bob.print()
+    bookA.print()
+    bookB.print()
+    bookC.print()
+
 //    val b2 = Book("Another book")
 //    b2.authors.add(a)
 //    println("Written books: ${a.written}")
